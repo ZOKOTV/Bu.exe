@@ -1,5 +1,9 @@
 name: Build APK
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,13 +13,19 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: unzip -q JoyoseTool.zip
+      - run: unzip -q -o JoyoseTool.zip
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
-      - run: gradle assembleDebug
+      - run: gradle assembleDebug -PverCode=${{ github.run_number }}
         working-directory: JoyoseTool
-      - uses: actions/upload-artifact@v4
-        with:
-          name: JoyoseTool-apk
-          path: JoyoseTool/app/build/outputs/apk/debug/app-debug.apk
+      - name: Tạo Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cp JoyoseTool/app/build/outputs/apk/debug/app-debug.apk td-exe.apk
+          gh release create "v${{ github.run_number }}" td-exe.apk \
+            --title "tđ.exe v${{ github.run_number }}" \
+            --notes "Bản build tự động số ${{ github.run_number }}" \
+            --latest
